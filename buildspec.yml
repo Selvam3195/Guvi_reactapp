@@ -1,34 +1,27 @@
-# Do not change version. This is the version of aws buildspec, not the version of your buldspec file.
+# Copyright Amazon.com Inc. or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
 version: 0.2
 
 phases:
   install:
     runtime-versions:
-      nodejs: 10  
+      python: 3.12
+      nodejs: 20
     commands:
-      - echo Installing Mocha...
-      - npm install -g mocha
-  pre_build:
-    commands:
-      - echo Installing source NPM dependencies...
-      - npm install
-      - npm install unit.js
+      - aws s3 cp s3://$S3_BUCKET_NAME/adf-build/ adf-build/ --recursive --only-show-errors
+      - pip install -r adf-build/requirements.txt -q
+      - python adf-build/generate_params.py
+
   build:
     commands:
-      - echo Build started on `date`
-      - echo Compiling the Node.js code
-      - mocha test.js
-  post_build:
-    commands:
-      - echo Build completed on `date`
-# Include only the files required for your application to run.
-# Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages 
-# used only for building and testing.
-# ExpressJS apps will need other artifact directories included (bin/*, public/*, routes/*, views/* etc).
+      - npm install aws-cdk -g
+      - npm install
+      - npm run build
+      - cdk synth > template.yml
+
 artifacts:
   files:
-    - app.js
-    - index.html
-    - package.json
-    - node_modules/async/*
-    - node_modules/lodash/*
+    - 'template.yml'
+    - 'params/*.json'
+    - 'params/*.yml'
